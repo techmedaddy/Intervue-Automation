@@ -1,72 +1,66 @@
-require("dotenv").config();
-const { Builder, By, until } = require("selenium-webdriver");
-const chrome = require("selenium-webdriver/chrome");
-const fs = require("fs");
+// test.js  (CommonJS‑friendly)
+require('dotenv').config();                 // pulls .env
 
-const EMAIL = process.env.INTERVUE_EMAIL;
-const PASSWORD = process.env.INTERVUE_PASSWORD;
+const {Builder, By, until} = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
+const fs     = require('node:fs/promises');
 
-async function waitAndClick(driver, locator, timeout = 20000) {
+const wait  = {short: 5_000, long: 20_000};
+
+async function clickable(driver, locator, timeout = wait.long) {
   const el = await driver.wait(until.elementLocated(locator), timeout);
-  await driver.wait(until.elementIsVisible(el), timeout);
-  await driver.wait(until.elementIsEnabled(el), timeout);
-  await el.click();
+  await driver.wait(until.elementIsVisible(el),   timeout);
+  await driver.wait(until.elementIsEnabled(el),   timeout);
+  return el;
 }
 
-async function runTest() {
+async function run() {
   const driver = await new Builder()
-    .forBrowser("chrome")
-    .setChromeOptions(
-      new chrome.Options().addArguments(
-        "--headless",
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--window-size=1920,1080"
-      )
-    )
-    .build();
+      .usingServer('http://selenium:4444/wd/hub')
+      .forBrowser('chrome')
+      .setChromeOptions(
+        new chrome.Options()
+          .addArguments('--headless=new',
+                        '--no-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--window-size=1920,1080'))
+      .build();
 
   try {
-    console.log("🔗 Navigating to homepage...");
-    await driver.get("https://www.intervue.io");
+    console.log('🔗  opening intervue.io');
+    await driver.get('https://www.intervue.io');
 
-    console.log("🕒 Waiting for top-right 'Login' button...");
-    await waitAndClick(driver, By.xpath("//a[text()='Login']"));
+    console.log('login');
+    await (await clickable(driver, By.xpath("//a[normalize-space()='Login']"))).click();
+    await (await clickable(driver,
+        By.xpath("//h2[contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'for companies')]/following::button[1]"))).click();
 
-    console.log("🕒 Waiting for 'For Companies' login option...");
-    await waitAndClick(
-      driver,
-      By.xpath("//h2[contains(text(), 'For Companies')]/following::button[1]")
-    );
+    console.log('credentials');
+    await (await clickable(driver, By.css("input[type='email']"), wait.short))
+         .sendKeys(process.env.INTERVUE_EMAIL);
+    await (await clickable(driver, By.css("input[type='password']"), wait.short))
+         .sendKeys(process.env.INTERVUE_PASSWORD);
+    await (await clickable(driver, By.xpath("//button[contains(.,'Login') or contains(.,'Sign in')]"))).click();
 
-    console.log("🔑 Entering credentials...");
-    await driver.wait(until.elementLocated(By.name("email")), 10000);
-    await driver.findElement(By.name("email")).sendKeys(EMAIL);
-    await driver.findElement(By.name("password")).sendKeys(PASSWORD);
-    await waitAndClick(driver, By.xpath("//button[contains(text(),'Login')]"));
+    console.log('search');
+    const search = await clickable(driver, By.css("input[type='search']"));
+    await search.sendKeys('automation demo\n');
 
-    console.log("📊 Waiting for dashboard...");
-    await driver.wait(until.elementLocated(By.css("input[placeholder='Search']")), 15000);
+    console.log('screenshot');
+    const png = await driver.takeScreenshot();
+    await fs.writeFile('screenshots/dashboard.png', png, 'base64');
 
-    console.log("🔍 Performing a dashboard search...");
-    const searchBox = await driver.findElement(By.css("input[placeholder='Search']"));
-    await searchBox.sendKeys("Test Candidate");
+    console.log('logout');
+    await (await clickable(driver, By.css("[data-testid='profile-menu']"))).click();
+    await (await clickable(driver, By.xpath("//span[normalize-space()='Logout']"))).click();
 
-    console.log("📸 Taking screenshot...");
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    fs.writeFileSync(`screenshot-${timestamp}.png`, await driver.takeScreenshot(), "base64");
-
-    console.log("🚪 Logging out...");
-    await waitAndClick(driver, By.css("button[aria-label='Account settings']"));
-    await waitAndClick(driver, By.xpath("//li[contains(text(), 'Logout')]"));
-
-    console.log("✅ Logged out, test completed.");
-  } catch (err) {
-    console.error("❌ Test failed:", err);
+    console.log('✅  done');
   } finally {
     await driver.quit();
   }
 }
 
-runTest();
+run().catch(err => {
+  console.error('❌  Test failed:', err);
+  process.exitCode = 1;
+});
