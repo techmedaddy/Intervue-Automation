@@ -1,4 +1,10 @@
-  # 📁 Project Structure
+# 📌 Project Introduction
+
+This project automates the company login workflow on [Intervue.io](https://www.intervue.io) using Selenium and Node.js inside Docker. It simulates real user behavior—logging in, searching on the dashboard, capturing a screenshot, and logging out—all in a headless browser environment.
+
+  
+  
+  ## 📁 Project Structure
 ```bash
 intervue-automation/
 ├── Dockerfile
@@ -9,10 +15,10 @@ intervue-automation/
 └── README.md
 ```
 This project runs Selenium tests inside a Docker environment to automate login and logout on [intervue.io](https://www.intervue.io).
-# 🚀 Getting Started
+## 🚀 Getting Started
 
 Follow these steps to clone and run this project locally using Docker.
-# 📦 Prerequisites
+## 📦 Prerequisites
 
 - [Git](https://git-scm.com/)
 - [Docker](https://www.docker.com/)
