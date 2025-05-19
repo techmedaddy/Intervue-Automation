@@ -17,7 +17,7 @@ intervue-automation/
 This project runs Selenium tests inside a Docker environment to automate login and logout on [intervue.io](https://www.intervue.io).
 ## 🚀 Getting Started
 
-Follow these steps to clone and run this project locally using Docker.
+Follow these steps to clone and run this project locally using Docker
 ## 📦 Prerequisites
 
 - [Git](https://git-scm.com/)
